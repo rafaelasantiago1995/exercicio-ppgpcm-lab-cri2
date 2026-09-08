@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Mundo Multiplataforma - A-Frame</title>
+  <!-- A-Frame VR Library -->
+  <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
+  <!-- A-Frame Environment Component (inclui o cenário forest) -->
+  <script src="https://unpkg.com/aframe-environment-component@1.3.2/dist/aframe-environment-component.min.js"></script>
+
+  <style>
+    /* Interface 2D na tela para exibir mensagens */
+    #ui-container {
+      position: absolute;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 80%;
+      max-width: 600px;
+      background: rgba(0, 0, 0, 0.8);
+      color: #fff;
+      font-family: Arial, sans-serif;
+      padding: 15px 20px;
+      border-radius: 10px;
+      border: 2px solid #4CAF50;
+      text-align: center;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+      z-index: 999;
+      display: none;
+    }
+    #ui-title {
+      font-size: 1.2rem;
+      font-weight: bold;
+      margin-bottom: 5px;
+      color: #4CAF50;
+    }
+    #ui-text {
+      font-size: 1rem;
+      line-height: 1.4;
+    }
+    #instructions {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      background: rgba(0,0,0,0.6);
+      color: white;
+      padding: 10px;
+      font-family: sans-serif;
+      border-radius: 5px;
+      z-index: 999;
+      pointer-events: none;
+    }
+  </style>
+
+  <script>
+    // Sistema de Text-To-Speech (Sintetizador de Voz)
+    const tts = {
+      speaking: false,
+      speak: function(text) {
+        if ('speechSynthesis' in window) {
+          // Cancela qualquer fala anterior
+          window.speechSynthesis.cancel();
+          
+          const utterance = new SpeechSynthesisUtterance(text);
+          utterance.lang = 'pt-BR';
+          utterance.rate = 1.0;
+          
+          window.speechSynthesis.speak(utterance);
+        }
+      },
+      stop: function() {
+        if ('speechSynthesis' in window) {
+          window.speechSynthesis.cancel();
+        }
+      }
+    };
+
+    // Componente customizado para detectar proximidade com a câmera
+    AFRAME.registerComponent('interactive-zone', {
+      schema: {
+        title: {type: 'string', default: ''},
+        message: {type: 'string', default: ''},
+        distance: {type: 'number', default: 3}
+      },
+      init: function () {
+        this.cameraEl = document.querySelector('#camera');
+        this.uiContainer = document.getElementById('ui-container');
+        this.uiTitle = document.getElementById('ui-title');
+        this.uiText = document.getElementById('ui-text');
+        this.inRange = false;
+      },
+      tick: function () {
+        if (!this.cameraEl) return;
+
+        // Calcula a distância entre a câmera/jogador e o elemento
+        const cameraPos = this.cameraEl.object3D.position;
+        const objectPos = this.el.object3D.position;
+        const dist = cameraPos.distanceTo(objectPos);
+
+        // Se o usuário entrar na zona de proximidade
+        if (dist <= this.data.distance && !this.inRange) {
+          this.inRange = true;
+          this.activateZone();
+        } 
+        // Se o usuário sair da zona
+        else if (dist > this.data.distance && this.inRange) {
+          this.inRange = false;
+          this.deactivateZone();
+        }
+      },
+      activateZone: function () {
+        // Exibe o texto na interface 2D
+        this.uiTitle.innerText = this.data.title;
+        this.uiText.innerText = this.data.message;
+        this.uiContainer.style.display = 'block';
+
+        // Dispara o áudio TTS
+        tts.speak(this.data.message);
+      },
+      deactivateZone: function () {
+        this.uiContainer.style.display = 'none';
+        tts.stop();
+      }
+    });
+  </script>
+</head>
+<body>
+
+  <!-- Instruções na Tela -->
+  <div id="instructions">
+    🚀 <b>Produção Multiplataforma VR</b><br>
+    Use <b>WASD</b> ou as <b>Seta do teclado</b> para andar.<br>
+    Clique e arraste com o <b>Mouse</b> para olhar ao redor.<br>
+    Aproxime-se dos objetos e NPCs para interagir!
+  </div>
+
+  <!-- Caixa de Diálogo 2D -->
+  <div id="ui-container">
+    <div id="ui-title">Título</div>
+    <div id="ui-text">Mensagem...</div>
+  </div>
+
+  <!-- Cena A-Frame -->
+  <a-scene>
+    <!-- Configuração do Cenário: Forest -->
+    <a-entity environment="preset: forest; lighting: point; groundColor: #2e4d25; dressingAmount: 50"></a-entity>
+
+    <!-- Câmera do Jogador -->
+    <a-entity id="camera" camera look-controls wasd-controls position="0 1.6 0">
+      <a-cursor color="#4CAF50" fuse="false"></a-cursor>
+    </a-entity>
+
+    <!-- Iluminação adicional -->
+    <a-light type="ambient" intensity="0.4"></a-light>
+    <a-light type="directional" intensity="0.6" position="-1 2 1"></a-light>
+
+    <!-- ==================== ELEMENTOS E NPCS DA FLORESTA ==================== -->
+
+    <!-- NPC 1: O Estrategista de Conteúdo -->
+    <a-entity position="-3 0 -5" interactive-zone="
+      title: 🧙‍♂️ NPC: Silas, o Estrategista;
+      message: Bem-vindo à floresta da comunicação! Criar conteúdo multiplataforma não é apenas dar 'copiar e colar'. É adaptar a linguagem para cada canal, seja YouTube, TikTok ou Podcast.;
+      distance: 3.5">
+      <!-- Corpo do NPC -->
+      <a-cylinder position="0 1 0" radius="0.4" height="1.5" color="#3F51B5"></a-cylinder>
+      <!-- Cabeça -->
+      <a-sphere position="0 2 0" radius="0.35" color="#FFC107"></a-sphere>
+      <!-- Rótulo 3D -->
+      <a-text value="Silas (Estrategista)" position="0 2.6 0" align="center" side="double" color="#FFF" scale="0.8 0.8 0.8"></a-text>
+    </a-entity>
+
+    <!-- OBJETO 1: Estúdio de Podcast (Áudio) -->
+    <a-entity position="4 0 -4" interactive-zone="
+      title: 🎙️ Estúdio de Podcast (Áudio);
+      message: O áudio é um formato poderoso! Podcasts permitem um consumo assíncrono e intimista, perfeito para conteúdos aprofundados e narrativas envolventes.;
+      distance: 3">
+      <!-- Mesa e Microfone simbolizados -->
+      <a-box position="0 0.5 0" width="1.5" height="1" depth="1" color="#795548"></a-box>
+      <a-cylinder position="0 1.2 0" radius="0.05" height="0.4" color="#111"></a-cylinder>
+      <a-sphere position="0 1.4 0" radius="0.1" color="#9E9E9E"></a-sphere>
+      <!-- Rótulo 3D -->
+      <a-text value="Estudio de Podcast" position="0 1.8 0" align="center" side="double" color="#FFF" scale="0.8 0.8 0.8"></a-text>
+    </a-entity>
+
+    <!-- OBJETO 2: Totem de Redes Sociais (Texto e Imagem) -->
+    <a-entity position="-5 0 -1" interactive-zone="
+      title: 📱 Totem de Micro-conteúdo;
+      message: Nas redes sociais, a atenção dura poucos segundos. Utilize ganchos visuais fortes e resuma sua mensagem em carrosséis, reels e posts dinâmicos.;
+      distance: 3">
+      <!-- Painel estilo Smartphone -->
+      <a-box position="0 1.5 0" width="0.8" height="1.6" depth="0.1" color="#212121"></a-box>
+      <a-plane position="0 1.5 0.06" width="0.7" height="1.4" color="#E91E63"></a-plane>
+      <!-- Rótulo 3D -->
+      <a-text value="Redes Sociais" position="0 2.5 0" align="center" side="double" color="#FFF" scale="0.8 0.8 0.8"></a-text>
+    </a-entity>
+
+    <!-- NPC 2: A Produtora de Vídeo -->
+    <a-entity position="2 0 -8" interactive-zone="
+      title: 👩‍🎥 NPC: Clara, Produtora de Vídeo;
+      message: Lembre-se: o vídeo na horizontal vai para a TV e YouTube, mas o vídeo vertical domina os celulares. Transmídia é contar histórias que se completam em diferentes telas!;
+      distance: 3.5">
+      <!-- Corpo -->
+      <a-cylinder position="0 1 0" radius="0.4" height="1.5" color="#009688"></a-cylinder>
+      <!-- Cabeça -->
+      <a-sphere position="0 2 0" radius="0.35" color="#FF8A65"></a-sphere>
+      <!-- Câmera ao lado -->
+      <a-box position="0.5 1.2 0" width="0.3" height="0.3" depth="0.4" color="#000"></a-box>
+      <!-- Rótulo 3D -->
+      <a-text value="Clara (Vídeo Maker)" position="0 2.6 0" align="center" side="double" color="#FFF" scale="0.8 0.8 0.8"></a-text>
+    </a-entity>
+
+    <!-- OBJETO 3: A Central de Analytics/Dados -->
+    <a-entity position="0 0 -10" interactive-zone="
+      title: 📊 Central de Métricas e Feedback;
+      message: Produzir para várias plataformas exige análise contínua. Observe a retenção do público, o engajamento e adapte sua estratégia com base nos dados reais.;
+      distance: 3.5">
+      <!-- Pirâmide/Holograma de dados -->
+      <a-cone position="0 1.2 0" radius-bottom="0.8" height="1.2" color="#00BCD4" material="opacity: 0.8; transparent: true"></a-cone>
+      <!-- Rótulo 3D -->
+      <a-text value="Métricas Multiplataforma" position="0 2.2 0" align="center" side="double" color="#FFF" scale="0.8 0.8 0.8"></a-text>
+    </a-entity>
+
+  </a-scene>
+
+</body>
+</html>
